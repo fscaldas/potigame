@@ -1,0 +1,157 @@
+use "jerimum"
+
+tipo Jogador
+  img = Imagem.fatie("jogador.png", 32, 48)
+  explosao = Imagem("explosao.png")
+  var vidas := 5
+  var x := 0.0
+  var y := jogo.altura - 180.0
+  var explodido := falso
+   
+
+  mova_esquerda()
+    x := se x > 10 então x - 10 senão 0 fim
+  fim
+
+  mova_direita()
+    x := se x < jogo.largura - 60 então x + 10 senão jogo.largura - 50 fim
+  fim
+   
+  desenhe()
+        se explodido então
+      explosao.desenhe(x, y, 4)
+    senão
+      img[13].desenhe(x, y, 1)
+    fim
+  fim
+
+  atingido_por(bombas: Lista[Bomba])
+    se não explodido então
+      para bomba em bombas faça
+        se jogo.distância(x, y, bomba.x, bomba.y) < 20 então
+          explodido := verdadeiro
+        fim
+      fim
+      se explodido então
+        vidas := vidas - 1
+      fim
+    fim
+    explodido
+  fim
+
+  reiniciar_posicao()
+    x := aleatório(20, jogo.largura - 20)
+    explodido := falso
+  fim
+
+  atualize()
+    se Teclado.TECLA_PARA_ESQUERDA então mova_esquerda fim
+    se Teclado.TECLA_PARA_DIREITA então mova_direita fim
+  fim
+fim
+
+tipo Bomba
+  img = Imagem.fatie("darth.png", 50, 50)
+  var x := aleatório(30, jogo.largura - 30)
+  var y := -aleatório(200)
+  var ativa := verdadeiro
+  var i := 1.0
+  
+  atualize(laser: Laser)
+    y := y + 4
+    i := i + 0.05
+    se i > 8 então i := 1 fim
+    se y > jogo.largura então
+      y := -aleatório(200)
+      x := aleatório(30, jogo.largura - 30)
+    fim
+    se jogo.distância(laser.x, laser.y, x, y) < 20 então
+      
+     
+      ativa := falso
+    fim
+  fim
+
+  desenhe()
+    se ativa então img[i.inteiro].desenhe(x, y, 3) fim
+  fim
+fim
+
+tipo Laser
+  jogador: Jogador
+  img = Imagem("laser.png")
+  var x := jogador.x
+  var y := jogador.y
+  var atirando := falso
+  var placar = 0
+
+  atirar()
+    atirando := verdadeiro
+  fim
+
+  atualize()
+    se Teclado.TECLA_ESPAÇO então atirar fim
+    se atirando então
+      y := y - 10 
+      se y < 0 então 
+         atirando := falso 
+         placar := placar + 10
+      fim
+    senão
+      x, y := jogador.x, jogador.y 
+    fim
+  fim
+  
+  desenhe()
+    se atirando então
+      img.desenhe(x, y, 4)
+    senão
+      img.desenhe(jogador.x, jogador.y, 4)
+    fim
+  fim
+fim
+
+# Principal
+
+jogador = Jogador()
+laser = Laser(jogador)
+fonte = Fonte(20)
+fundo = Imagem("space.png")
+var bombas := [Bomba(), Bomba(), Bomba()]
+var rodando := verdadeiro
+
+atualize()
+  se jogador.atingido_por(bombas) então
+    rodando := falso
+    se jogador.vidas == 0 então
+    	fonte.desenhe("YOU LOSE!", 200, 200, 200, Cor.VERMELHO)
+    fim
+  fim
+
+  se não rodando e jogador.vidas > 0 então
+    rodando := verdadeiro
+    jogador.reiniciar_posicao
+  fim
+  se rodando então
+    bombas := bombas.selecione(bomba => bomba.ativa)
+    para bomba em bombas faça
+      bomba.atualize(laser)
+    fim
+    se bombas.tamanho < 3 então bombas := Bomba() :: bombas fim
+    jogador.atualize
+    laser.atualize
+  fim
+fim
+
+desenhe()
+  fundo.desenhe(0, 0, 0)
+  jogador.desenhe
+  para bomba em bombas faça
+    bomba.desenhe
+  fim
+  laser.desenhe
+  fonte.desenhe("Vidas: {jogador.vidas}", 10, 20, 3, Cor.BRANCO)
+  fonte.desenhe("Placar: {laser.placar}", 370, 20, 3, Cor.AMARELO)
+fim
+
+jogo.iniciar("Potter vs Vader", 500, 400, atualize, desenhe)
